@@ -10,31 +10,37 @@ template OneLevelVerifier() {
 
     signal output root;
 
-    component hasher = Poseidon(2);
+    component leaf_hasher = Poseidon(2);
 
     side * (side-1) === 0;
 
     //simplify version of (1-side) * currentHash + side * sibling
-    hasher.inputs[0] <== currentHash + side * (sibling - currentHash);
-    hasher.inputs[1] <== sibling + side * (currentHash - sibling);
+    leaf_hasher.inputs[0] <== currentHash + side * (sibling - currentHash);
+    leaf_hasher.inputs[1] <== sibling + side * (currentHash - sibling);
 
-    root <== hasher.out;
+    root <== leaf_hasher.out;
 }
 
-template VerifyMerkleTree(levels) {
+template VerifyMerkleTree(levels, salt) {
     signal input secret;
     signal input siblings[levels];
     signal input sides[levels];
 
     signal output root;
+    signal output nullifier;
 
-    component hasher = Poseidon(1);
-    hasher.inputs[0] <== secret;
+    component nullifier_hasher = Poseidon(2);
+    nullifier_hasher.inputs[0] <== secret;
+    nullifier_hasher.inputs[1] <== salt;
+    nullifier <== nullifier_hasher.out;
+
+    component leaf_hasher = Poseidon(1);
+    leaf_hasher.inputs[0] <== secret;
 
     component h[levels];
     signal currentHash[levels+1];
 
-    currentHash[0] <== hasher.out;
+    currentHash[0] <== leaf_hasher.out;
 
     for (var i = 0; i < levels; i++){
         h[i] = OneLevelVerifier();
@@ -46,4 +52,4 @@ template VerifyMerkleTree(levels) {
     root <== currentHash[levels];
 }
 
-component main = VerifyMerkleTree(3); 
+component main = VerifyMerkleTree(3, 123456789); 
