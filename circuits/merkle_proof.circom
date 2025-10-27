@@ -14,16 +14,9 @@ template OneLevelVerifier() {
 
     side * (side-1) === 0;
 
-    signal l0;
-    signal r0;
-    signal l1;
-    signal r1;
-    l0 <== (1-side) * currentHash;
-    r0 <== side * sibling;
-    hasher.inputs[0] <== l0 + r0;
-    l1 <== side * currentHash;
-    r1 <== (1 - side) * sibling;
-    hasher.inputs[1] <== l1 + r1;
+    //simplify version of (1-side) * currentHash + side * sibling
+    hasher.inputs[0] <== currentHash + side * (sibling - currentHash);
+    hasher.inputs[1] <== sibling + side * (currentHash - sibling);
 
     root <== hasher.out;
 }
