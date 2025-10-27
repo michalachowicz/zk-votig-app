@@ -21,17 +21,19 @@ template OneLevelVerifier() {
     root <== leaf_hasher.out;
 }
 
-template VerifyMerkleTree(levels, salt) {
+template VerifyMerkleTree(levels) {
     signal input secret;
     signal input siblings[levels];
     signal input sides[levels];
+    signal input vote;
+    signal input roundId;
 
     signal output root;
     signal output nullifier;
 
     component nullifier_hasher = Poseidon(2);
     nullifier_hasher.inputs[0] <== secret;
-    nullifier_hasher.inputs[1] <== salt;
+    nullifier_hasher.inputs[1] <== roundId;
     nullifier <== nullifier_hasher.out;
 
     component leaf_hasher = Poseidon(1);
@@ -52,4 +54,4 @@ template VerifyMerkleTree(levels, salt) {
     root <== currentHash[levels];
 }
 
-component main = VerifyMerkleTree(3, 123456789); 
+component main { public [vote, roundId] } = VerifyMerkleTree(3);
