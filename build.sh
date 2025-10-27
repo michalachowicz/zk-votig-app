@@ -23,7 +23,7 @@ echo "[1/6] Compiling ${CIRCUIT}.circom..."
 circom circuits/${CIRCUIT}.circom --r1cs --wasm --sym -l node_modules/circomlib/circuits -o build/
 
 echo "[2/6] Computing the witness..."
-node build/${CIRCUIT}_js/generate_witness.js \
+snarkjs wtns calculate \
     build/${CIRCUIT}_js/${CIRCUIT}.wasm \
     inputs/input.json \
     build/witness.wtns
