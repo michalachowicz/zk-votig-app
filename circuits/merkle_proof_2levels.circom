@@ -17,7 +17,7 @@ template VerifyMerkleTree() {
 
     hash.inputs[0] <== secret;
 
-    signal l0;
+    signal l;
     signal r0;
     signal l1;
     signal r1;
