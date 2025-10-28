@@ -23,6 +23,7 @@ contract Voting {
     mapping (uint => mapping(bytes32 => bool)) public hasVoted;
     mapping ( uint => mapping(bytes32 => bool)) public isOption;
     mapping (uint => mapping(bytes32 => bool)) public commitments;
+    uint constant P = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
 
     constructor(address _verifier) {
@@ -53,9 +54,9 @@ contract Voting {
     }
 
     function commit(uint[2] calldata _pA, uint[2][2] calldata _pB, uint[2] calldata _pC, bytes32 _nullifier, bytes32 _commit, uint _roundId) external{
-        require(_roundId  < roundsCount, "Round does not exists!");
-        require(block.timestamp >= roundDetails[_roundId].commitmentStartTime, "Commiting has not started yet!");
-        require(block.timestamp <= roundDetails[_roundId].commitmentEndTime, "Commiting has ended!");
+        require(_roundId  < roundsCount, "Round does not exist!");
+        require(block.timestamp >= roundDetails[_roundId].commitmentStartTime, "Committing has not started yet!");
+        require(block.timestamp <= roundDetails[_roundId].commitmentEndTime, "Committing has ended!");
         require(hasVoted[_roundId][_nullifier] == false, "Already commited!");
         uint[4] memory pub = [uint(roundDetails[_roundId].merkleRoot), uint(_nullifier), uint(_commit), _roundId];
         require(verifier.verifyProof(_pA, _pB, _pC, pub), "Invalid proof!");
@@ -64,13 +65,17 @@ contract Voting {
         hasVoted[_roundId][_nullifier] = true;
     }
 
-    function reveal(bytes32 _commit, bytes32 _option, bytes32 nullifier, uint _roundId, bytes32 _signature) external {
-        require(_roundId < roundsCount, "Round does not exists!");
+    function reveal(bytes32 _commit, bytes32 _option, bytes32 _nullifier, uint _roundId, bytes32 _salt) external {
+        require(_roundId < roundsCount, "Round does not exist!");
         require(block.timestamp > roundDetails[_roundId].commitmentEndTime, "Revealing has not started yet!");
         require(block.timestamp <= roundDetails[_roundId].revealEndTime, "Revealing has ended!");
         require(commitments[_roundId][_commit], "Commitment not found or already revealed!");
         require(isOption[_roundId][_option], "Invalid option!");
-        require(_commit == keccak256(abi.encode(_option, nullifier, _roundId, _signature)), "Invalid commitment!");
+        //The circom circuit operates in the BN254 field (mod P)
+        //Therefore the value of the public output may be different from the input value if it is >= P
+        //During proof generation keccak hash is used as the circuit input
+        //In the commit phase user provides value reduced to the field of P - keccak(option, nullifier, roundId, salt) % P
+        require(uint(_commit) == uint(keccak256(abi.encode(_option, _nullifier, _roundId, _salt))) % P, "Invalid commitment!");
         votes[_roundId][_option]++;
         commitments[_roundId][_commit] = false;
         totalRevealedVotes[_roundId]++;        
