@@ -8,8 +8,9 @@ contract Voting {
 
     address public owner;
     struct  Round {
-        uint startTime;
-        uint endTime;
+        uint commitmentStartTime;
+        uint commitmentEndTime;
+        uint revealEndTime;
         bytes32 merkleRoot;
         bytes32[] options;
     }
@@ -18,8 +19,10 @@ contract Voting {
     mapping ( uint => Round) public roundDetails;
     mapping (uint => mapping(bytes32 => uint)) public votes;
     mapping (uint => uint) public totalVotes;
+    mapping (uint => uint) public totalRevealedVotes;
     mapping (uint => mapping(bytes32 => bool)) public hasVoted;
     mapping ( uint => mapping(bytes32 => bool)) public isOption;
+    mapping (uint => mapping(bytes32 => bool)) public commitments;
 
 
     constructor(address _verifier) {
@@ -36,28 +39,41 @@ contract Voting {
         owner = newOwner;
     }
 
-    function addRound(uint startTime, uint endTime, bytes32 merkleRoot, bytes32[] calldata options) external onlyOwner {
-        require (startTime > block.timestamp, "Start time has to be greater than current time!");
-        require (endTime > startTime, "End time has to be greater than start time!");
+    function addRound(uint commitmentStartTime, uint commitmentEndTime, uint revealEndTime, bytes32 merkleRoot, bytes32[] calldata options) external onlyOwner {
+        require (commitmentStartTime > block.timestamp, "Commitment start time has to be greater than current time!");
+        require (commitmentEndTime > commitmentStartTime, "Commitment end time has to be greater than start time!");
+        require (revealEndTime > commitmentEndTime, "Reveal end time has to be greater than commitment end time!");
         require (options.length > 0, "At least one option is required!");
 
-        roundDetails[roundsCount] = Round(startTime, endTime, merkleRoot, options);
+        roundDetails[roundsCount] = Round(commitmentStartTime, commitmentEndTime, revealEndTime, merkleRoot, options);
         for (uint i = 0; i < options.length; i++) {
             isOption[roundsCount][options[i]] = true;
         }
         roundsCount++;
     }
 
-    function vote(uint[2] calldata _pA, uint[2][2] calldata _pB, uint[2] calldata _pC, bytes32 _nullifier, bytes32 _vote, uint _roundId) external{
-        require(block.timestamp >= roundDetails[_roundId].startTime, "Voting has not started yet!");
-        require(block.timestamp <= roundDetails[_roundId].endTime, "Voting has ended!");
-        require(hasVoted[_roundId][_nullifier] == false, "Already voted!");
-        require(isOption[_roundId][_vote] == true, "Invalid option!");
-        uint[4] memory pub = [uint(roundDetails[_roundId].merkleRoot), uint(_nullifier), uint(_vote), _roundId];
+    function commit(uint[2] calldata _pA, uint[2][2] calldata _pB, uint[2] calldata _pC, bytes32 _nullifier, bytes32 _commit, uint _roundId) external{
+        require(_roundId  < roundsCount, "Round does not exists!");
+        require(block.timestamp >= roundDetails[_roundId].commitmentStartTime, "Commiting has not started yet!");
+        require(block.timestamp <= roundDetails[_roundId].commitmentEndTime, "Commiting has ended!");
+        require(hasVoted[_roundId][_nullifier] == false, "Already commited!");
+        uint[4] memory pub = [uint(roundDetails[_roundId].merkleRoot), uint(_nullifier), uint(_commit), _roundId];
         require(verifier.verifyProof(_pA, _pB, _pC, pub), "Invalid proof!");
-        votes[_roundId][_vote]++;
+        commitments[_roundId][_commit] = true;
         totalVotes[_roundId]++;
         hasVoted[_roundId][_nullifier] = true;
+    }
+
+    function reveal(bytes32 _commit, bytes32 _option, bytes32 nullifier, uint _roundId, bytes32 _signature) external {
+        require(_roundId < roundsCount, "Round does not exists!");
+        require(block.timestamp > roundDetails[_roundId].commitmentEndTime, "Revealing has not started yet!");
+        require(block.timestamp <= roundDetails[_roundId].revealEndTime, "Revealing has ended!");
+        require(commitments[_roundId][_commit], "Commitment not found or already revealed!");
+        require(isOption[_roundId][_option], "Invalid option!");
+        require(_commit == keccak256(abi.encode(_option, nullifier, _roundId, _signature)), "Invalid commitment!");
+        votes[_roundId][_option]++;
+        commitments[_roundId][_commit] = false;
+        totalRevealedVotes[_roundId]++;        
     }
 
     function getOptions(uint _roundId) external view returns (bytes32[] memory) {

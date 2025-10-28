@@ -14,7 +14,6 @@ template OneLevelVerifier() {
 
     side * (side-1) === 0;
 
-    //simplify version of (1-side) * currentHash + side * sibling
     leaf_hasher.inputs[0] <== currentHash + side * (sibling - currentHash);
     leaf_hasher.inputs[1] <== sibling + side * (currentHash - sibling);
 
@@ -25,7 +24,7 @@ template VerifyMerkleTree(levels) {
     signal input secret;
     signal input siblings[levels];
     signal input sides[levels];
-    signal input vote;
+    signal input commitment;
     signal input roundId;
 
     signal output root;
@@ -54,4 +53,4 @@ template VerifyMerkleTree(levels) {
     root <== currentHash[levels];
 }
 
-component main { public [vote, roundId] } = VerifyMerkleTree(3);
+component main { public [commitment, roundId] } = VerifyMerkleTree(3);
