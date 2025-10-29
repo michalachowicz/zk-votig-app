@@ -54,10 +54,11 @@ contract Voting {
         require (revealEndTime > commitmentEndTime, "Reveal end time has to be greater than commitment end time!");
         require (options.length > 0, "At least one option is required!");
 
-        roundDetails[roundsCount] = Round(commitmentStartTime, commitmentEndTime, revealEndTime, merkleRoot, options);
         for (uint i = 0; i < options.length; i++) {
+            require(!isOption[roundsCount][options[i]], "Duplicate option");
             isOption[roundsCount][options[i]] = true;
         }
+        roundDetails[roundsCount] = Round(commitmentStartTime, commitmentEndTime, revealEndTime, merkleRoot, options);
         roundsCount++;
     }
 
