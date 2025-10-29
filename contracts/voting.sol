@@ -8,7 +8,7 @@ contract Voting {
 
     address public owner;
     struct  Round {
-        uint commitmentStartTime;
+        uint startTime;
         uint commitmentEndTime;
         uint revealEndTime;
         bytes32 merkleRoot;
@@ -49,9 +49,9 @@ contract Voting {
         owner = newOwner;
     }
 
-    function addRound(uint commitmentStartTime, uint commitmentEndTime, uint revealEndTime, bytes32 merkleRoot, bytes32[] calldata options) external onlyOwner {
-        require (commitmentStartTime > block.timestamp, "Commitment start time has to be greater than current time!");
-        require (commitmentEndTime > commitmentStartTime, "Commitment end time has to be greater than start time!");
+    function addRound(uint startTime, uint commitmentEndTime, uint revealEndTime, bytes32 merkleRoot, bytes32[] calldata options) external onlyOwner {
+        require (startTime > block.timestamp, "Commitment start time has to be greater than current time!");
+        require (commitmentEndTime > startTime, "Commitment end time has to be greater than start time!");
         require (revealEndTime > commitmentEndTime, "Reveal end time has to be greater than commitment end time!");
         require (options.length > 0, "At least one option is required!");
 
@@ -59,13 +59,13 @@ contract Voting {
             require(!isOption[roundsCount][options[i]], "Duplicate option");
             isOption[roundsCount][options[i]] = true;
         }
-        roundDetails[roundsCount] = Round(commitmentStartTime, commitmentEndTime, revealEndTime, merkleRoot, options);
+        roundDetails[roundsCount] = Round(startTime, commitmentEndTime, revealEndTime, merkleRoot, options);
         roundsCount++;
     }
 
     function commit(uint[2] calldata _pA, uint[2][2] calldata _pB, uint[2] calldata _pC, bytes32 _nullifier, bytes32 _commit, uint _roundId, uint _nonce) external{
         require(_roundId  < roundsCount, "Round does not exist!");
-        require(block.timestamp >= roundDetails[_roundId].commitmentStartTime, "Committing has not started yet!");
+        require(block.timestamp >= roundDetails[_roundId].startTime, "Committing has not started yet!");
         require(block.timestamp <= roundDetails[_roundId].commitmentEndTime, "Committing has ended!");
         require(_nonce + 1 == nonces[_roundId][_nullifier], "Invalid nonce!");
         uint[5] memory pub = [uint(roundDetails[_roundId].merkleRoot), uint(_nullifier), uint(_commit), _roundId, _nonce];
@@ -74,6 +74,7 @@ contract Voting {
         if (state[_roundId][_nullifier] == voteState.None)
             totalCommits[_roundId];
         state[_roundId][_nullifier] = voteState.Committed;
+        nonces[_roundId][_nullifier]++;
     }
 
     function reveal(bytes32 _option, bytes32 _nullifier, uint _roundId, bytes32 _salt) external {
