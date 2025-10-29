@@ -45,6 +45,7 @@ contract Voting {
     }   
 
     function changeOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "Address cannot be zero!");
         owner = newOwner;
     }
 
