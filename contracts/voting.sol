@@ -21,6 +21,10 @@ contract Voting {
         Revealed
     }
 
+    event RoundAdded(uint indexed roundId, uint start, uint commitEnd, uint revealEnd);
+    event Committed(uint indexed roundId, bytes32 indexed nullifier, bytes32 commit, uint nonce);
+    event Revealed(uint indexed roundId, bytes32 indexed nullifier, bytes32 option);
+
     Groth16Verifier immutable verifier;
     uint public roundsCount = 0;
     mapping ( uint => Round) public roundDetails;
@@ -61,6 +65,7 @@ contract Voting {
         }
         roundDetails[roundsCount] = Round(startTime, commitmentEndTime, revealEndTime, merkleRoot, options);
         roundsCount++;
+        emit RoundAdded(roundsCount - 1, startTime,  commitmentEndTime, revealEndTime);
     }
 
     function commit(uint[2] calldata _pA, uint[2][2] calldata _pB, uint[2] calldata _pC, bytes32 _nullifier, bytes32 _commit, uint _roundId, uint _nonce) external{
@@ -75,6 +80,7 @@ contract Voting {
             totalCommits[_roundId];
         state[_roundId][_nullifier] = voteState.Committed;
         nonces[_roundId][_nullifier]++;
+        emit Committed(_roundId, _nullifier, _commit, _nonce);
     }
 
     function reveal(bytes32 _option, bytes32 _nullifier, uint _roundId, bytes32 _salt) external {
@@ -92,6 +98,7 @@ contract Voting {
         votes[_roundId][_option]++;
         state[_roundId][_nullifier] = voteState.Revealed;
         totalRevealedVotes[_roundId]++;
+        emit Revealed(_roundId, _nullifier, _option);
     }
 
     function getOptions(uint _roundId) external view returns (bytes32[] memory) {
