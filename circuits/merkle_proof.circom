@@ -26,6 +26,7 @@ template VerifyMerkleTree(levels) {
     signal input sides[levels];
     signal input commitment;
     signal input roundId;
+    signal input nonce;
 
     signal output root;
     signal output nullifier;
@@ -53,4 +54,4 @@ template VerifyMerkleTree(levels) {
     root <== currentHash[levels];
 }
 
-component main { public [commitment, roundId] } = VerifyMerkleTree(3);
+component main { public [commitment, roundId, nonce] } = VerifyMerkleTree(3);

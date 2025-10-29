@@ -30,6 +30,7 @@ contract Voting {
     mapping (uint => mapping(bytes32 => voteState)) public state;
     mapping ( uint => mapping(bytes32 => bool)) public isOption;
     mapping (uint => mapping(bytes32 => bytes32)) public commitments;
+    mapping (uint => mapping(bytes32 => uint)) public nonces;
     uint constant P = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
 
@@ -60,11 +61,12 @@ contract Voting {
         roundsCount++;
     }
 
-    function commit(uint[2] calldata _pA, uint[2][2] calldata _pB, uint[2] calldata _pC, bytes32 _nullifier, bytes32 _commit, uint _roundId) external{
+    function commit(uint[2] calldata _pA, uint[2][2] calldata _pB, uint[2] calldata _pC, bytes32 _nullifier, bytes32 _commit, uint _roundId, uint _nonce) external{
         require(_roundId  < roundsCount, "Round does not exist!");
         require(block.timestamp >= roundDetails[_roundId].commitmentStartTime, "Committing has not started yet!");
         require(block.timestamp <= roundDetails[_roundId].commitmentEndTime, "Committing has ended!");
-        uint[4] memory pub = [uint(roundDetails[_roundId].merkleRoot), uint(_nullifier), uint(_commit), _roundId];
+        require(_nonce + 1 == nonces[_roundId][_nullifier], "Invalid nonce!");
+        uint[5] memory pub = [uint(roundDetails[_roundId].merkleRoot), uint(_nullifier), uint(_commit), _roundId, _nonce];
         require(verifier.verifyProof(_pA, _pB, _pC, pub), "Invalid proof!");
         commitments[_roundId][_nullifier] = _commit;
         if (state[_roundId][_nullifier] == voteState.None)
@@ -92,4 +94,5 @@ contract Voting {
     function getOptions(uint _roundId) external view returns (bytes32[] memory) {
         return roundDetails[_roundId].options;
     }
+
 }
