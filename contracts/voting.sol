@@ -72,12 +72,12 @@ contract Voting {
         require(_roundId  < roundsCount, "Round does not exist!");
         require(block.timestamp >= roundDetails[_roundId].startTime, "Committing has not started yet!");
         require(block.timestamp <= roundDetails[_roundId].commitmentEndTime, "Committing has ended!");
-        require(_nonce + 1 == nonces[_roundId][_nullifier], "Invalid nonce!");
+        require(_nonce == nonces[_roundId][_nullifier], "Invalid nonce!");
         uint[5] memory pub = [uint(roundDetails[_roundId].merkleRoot), uint(_nullifier), uint(_commit), _roundId, _nonce];
         require(verifier.verifyProof(_pA, _pB, _pC, pub), "Invalid proof!");
         commitments[_roundId][_nullifier] = _commit;
         if (state[_roundId][_nullifier] == voteState.None)
-            totalCommits[_roundId];
+            totalCommits[_roundId]++;
         state[_roundId][_nullifier] = voteState.Committed;
         nonces[_roundId][_nullifier]++;
         emit Committed(_roundId, _nullifier, _commit, _nonce);
@@ -87,7 +87,7 @@ contract Voting {
         require(_roundId < roundsCount, "Round does not exist!");
         require(block.timestamp > roundDetails[_roundId].commitmentEndTime, "Revealing has not started yet!");
         require(block.timestamp <= roundDetails[_roundId].revealEndTime, "Revealing has ended!");
-        require(state[_roundId][_nullifier] != voteState.None, "User has not commited!");
+        require(state[_roundId][_nullifier] != voteState.None, "User has not committed!");
         require(state[_roundId][_nullifier] != voteState.Revealed, "User has already revealed!");
         require(isOption[_roundId][_option], "Invalid option!");
         //The circom circuit operates in the BN254 field (mod P)
