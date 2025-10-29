@@ -25,7 +25,7 @@ contract Voting {
     uint public roundsCount = 0;
     mapping ( uint => Round) public roundDetails;
     mapping (uint => mapping(bytes32 => uint)) public votes;
-    mapping (uint => uint) public totalVotes;
+    mapping (uint => uint) public totalCommits;
     mapping (uint => uint) public totalRevealedVotes;
     mapping (uint => mapping(bytes32 => voteState)) public state;
     mapping ( uint => mapping(bytes32 => bool)) public isOption;
@@ -67,7 +67,8 @@ contract Voting {
         uint[4] memory pub = [uint(roundDetails[_roundId].merkleRoot), uint(_nullifier), uint(_commit), _roundId];
         require(verifier.verifyProof(_pA, _pB, _pC, pub), "Invalid proof!");
         commitments[_roundId][_nullifier] = _commit;
-        totalVotes[_roundId]++;
+        if (state[_roundId][_nullifier] == voteState.None)
+            totalCommits[_roundId];
         state[_roundId][_nullifier] = voteState.Committed;
     }
 
